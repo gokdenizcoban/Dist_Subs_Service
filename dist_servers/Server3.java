@@ -3,39 +3,59 @@ import java.net.*;
 
 public class Server3 {
     private static final int PORT = 5003;
-    private static final int SERVER1_PORT = 5001;
-    private static final int SERVER2_PORT = 5002;
+    private static final String[] OTHER_SERVERS = {"localhost:5001", "localhost:5002"};
 
     public static void main(String[] args) {
-        try {
-            // Server3'ün kendi soketi
-            ServerSocket serverSocket = new ServerSocket(PORT);
-            System.out.println("Server3 başlatıldı. Port: " + PORT);
+        new Thread(() -> startServer(PORT)).start();
+        connectToOtherServers(OTHER_SERVERS);
+    }
 
-            // Server1 ve Server2'ye bağlantı kurma girişimi
-            try {
-                Socket socketToServer1 = new Socket("localhost", SERVER1_PORT);
-                System.out.println("Server1'e bağlantı kuruldu.");
-            } catch (ConnectException e) {
-                System.out.println("Server1'e bağlantı kurulamadı. (Henüz başlatılmamış olabilir)");
-            }
+    private static void startServer(int port) {
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server3 started on port: " + port);
 
-            try {
-                Socket socketToServer2 = new Socket("localhost", SERVER2_PORT);
-                System.out.println("Server2'ye bağlantı kuruldu.");
-            } catch (ConnectException e) {
-                System.out.println("Server2'ye bağlantı kurulamadı. (Henüz başlatılmamış olabilir)");
-            }
-
-            // Diğer serverlardan gelecek bağlantıları bekle
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Yeni bağlantı kabul edildi: " +
-                        clientSocket.getInetAddress() + ":" + clientSocket.getPort());
+                System.out.println("Server3 accepted connection from: " + clientSocket.getInetAddress().getHostAddress());
+                new Thread(() -> handleClient(clientSocket)).start();
             }
-
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error in Server3: " + e.getMessage());
+        }
+    }
+
+    private static void handleClient(Socket clientSocket) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+            String command = in.readLine();
+            System.out.println("Server3 received command: " + command);
+
+            if ("STRT".equals(command)) {
+                out.println("YEP");
+                System.out.println("Server3 sent response: YEP");
+            } else {
+                out.println("NOP");
+                System.out.println("Server3 sent response: NOP");
+            }
+        } catch (IOException e) {
+            System.err.println("Error in Server3 handling client: " + e.getMessage());
+        }
+    }
+
+    private static void connectToOtherServers(String[] servers) {
+        for (String server : servers) {
+            String[] parts = server.split(":");
+            String host = parts[0];
+            int port = Integer.parseInt(parts[1]);
+
+            try (Socket socket = new Socket(host, port)) {
+                System.out.println("Server3 connected to " + host + ":" + port);
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println("Hello from Server3 to " + host + ":" + port);
+            } catch (IOException e) {
+                System.err.println("Server3 failed to connect to " + host + ":" + port + " - " + e.getMessage());
+            }
         }
     }
 }
