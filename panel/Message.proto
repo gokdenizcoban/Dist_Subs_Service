@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package myprotobuf;
+
+message Message {
+  enum DemandType {
+    STRT = 0;  // Start
+    CPCTY = 1; // Capacity
+    SUBS = 2;  // Subscribe
+    DEL = 3;   // Delete
+  }
+
+  enum ResponseType {
+    YEP = 0; // Success
+    NOP = 1; // Failure
+  }
+
+  DemandType demand = 1;  // Command being sent
+  ResponseType response = 2; // Response from the server
+}
