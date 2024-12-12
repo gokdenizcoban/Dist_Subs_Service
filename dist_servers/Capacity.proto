@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package myprotobuf;
+
+// Capacity mesaj tanımı
+message Capacity {
+  int32 serverX_status = 1; // Sunucu durumu (örneğin, liste boyutu gibi bir metrik)
+  int64 timestamp = 2;     // UNIX epoch zamanı
+}
