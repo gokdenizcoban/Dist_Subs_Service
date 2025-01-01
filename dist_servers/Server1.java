@@ -1,84 +1,83 @@
+package org.example;
 import java.io.*;
 import java.net.*;
-import com.google.protobuf.*; // Ensure you have the Protobuf dependency
-
-// Import generated Protobuf classes
-import myprotobuf.ConfigurationOuterClass.Configuration;
-import myprotobuf.MessageOuterClass.Message;
-import myprotobuf.CapacityOuterClass.Capacity;
+import java.util.HashMap;
 
 public class Server1 {
-    private static final int PORT = 5001;
-    private static final String[] OTHER_SERVERS = {"localhost:5002", "localhost:5003"};
+    private static HashMap<String, String> data = new HashMap<>();
+    private static HashMap<String, Integer> replicationCount = new HashMap<>();
+    private static int float_tolerance = 1; // tolerans değeri
 
     public static void main(String[] args) {
-        new Thread(() -> startServer(PORT)).start();
-        connectToOtherServers(OTHER_SERVERS);
+        data.put("key1", "value1");
+        data.put("key2", "value2");
+
+        int port = 5000;
+        Thread serverThread = new Thread(() -> startServer(port));
+        serverThread.start();
+
+        while (true) {
+            sendDataToOtherServer("localhost", 6000); // Server2
+            sendDataToOtherServer("localhost", 7000); // Server3
+            try {
+                Thread.sleep(5000); // 5 saniye bekle
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void startServer(int port) {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Server1 started on port: " + port);
+            System.out.println("Server1 is listening on port " + port);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Server1 accepted connection from: " + clientSocket.getInetAddress().getHostAddress());
+                Socket socket = serverSocket.accept();
+                System.out.println("Connection established with another server!");
 
-                new Thread(() -> handleClient(clientSocket)).start();
+                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                String receivedMessage = input.readLine();
+                System.out.println("Received message: " + receivedMessage);
+
+                parseAndAddData(receivedMessage);
             }
         } catch (IOException e) {
-            System.err.println("Error in Server1: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private static void handleClient(Socket clientSocket) {
-        try (
-                InputStream input = clientSocket.getInputStream();
-                OutputStream output = clientSocket.getOutputStream()
-        ) {
-            // Deserialize incoming Protobuf message
-            Message request = Message.parseFrom(input);
-            System.out.println("Server1 received command: " + request.getDemand());
+    private static void parseAndAddData(String message) {
+        String[] entries = message.split(";");
+        for (String entry : entries) {
+            String[] keyValue = entry.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0];
+                String value = keyValue[1];
 
-            Message response;
-            if (request.getDemand() == Message.DemandType.STRT) {
-                response = Message.newBuilder()
-                        .setDemand(Message.DemandType.STRT)
-                        .setResponse(Message.ResponseType.YEP)
-                        .build();
-                System.out.println("Server1 sent response: YEP");
-            } else {
-                response = Message.newBuilder()
-                        .setDemand(request.getDemand())
-                        .setResponse(Message.ResponseType.NOP)
-                        .build();
-                System.out.println("Server1 sent response: NOP");
+                replicationCount.putIfAbsent(key, 0);
+                int currentReplication = replicationCount.get(key);
+
+                if (currentReplication < float_tolerance) {
+                    replicationCount.put(key, currentReplication + 1);
+                    data.put(key, value);
+                    System.out.println("Added key: " + key + " with value: " + value);
+                }
             }
-
-            // Serialize response message
-            response.writeTo(output);
-        } catch (IOException e) {
-            System.err.println("Error in Server1 handling client: " + e.getMessage());
         }
+        System.out.println("Updated map: " + data);
     }
 
-    private static void connectToOtherServers(String[] servers) {
-        for (String server : servers) {
-            String[] parts = server.split(":");
-            String host = parts[0];
-            int port = Integer.parseInt(parts[1]);
-
-            try (Socket socket = new Socket(host, port)) {
-                System.out.println("Server1 connected to " + host + ":" + port);
-
-                // Send a test Protobuf message to the other server
-                Message message = Message.newBuilder()
-                        .setDemand(Message.DemandType.STRT)
-                        .build();
-                message.writeTo(socket.getOutputStream());
-            } catch (IOException e) {
-                System.err.println("Server1 failed to connect to " + host + ":" + port + " - " + e.getMessage());
+    private static void sendDataToOtherServer(String host, int port) {
+        try (Socket socket = new Socket(host, port);
+             PrintWriter output = new PrintWriter(socket.getOutputStream(), true)) {
+            StringBuilder mapString = new StringBuilder();
+            for (String key : data.keySet()) {
+                mapString.append(key).append("=").append(data.get(key)).append(";");
             }
+            output.println(mapString.toString());
+            System.out.println("Sent data to server at " + host + ":" + port + " -> " + mapString);
+        } catch (IOException e) {
+            System.out.println("Failed to send data to " + host + ":" + port);
         }
     }
 }
