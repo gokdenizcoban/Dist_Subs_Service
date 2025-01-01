@@ -1,61 +1,83 @@
+package org.example;
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
 
 public class Server2 {
-    private static final int PORT = 5002;
-    private static final String[] OTHER_SERVERS = {"localhost:5001", "localhost:5003"};
+    private static HashMap<String, String> data = new HashMap<>();
+    private static HashMap<String, Integer> replicationCount = new HashMap<>();
+    private static int float_tolerance = 1; //  tolerans değeri
 
     public static void main(String[] args) {
-        new Thread(() -> startServer(PORT)).start();
-        connectToOtherServers(OTHER_SERVERS);
+        data.put("key3", "value3");
+        data.put("key4", "value3");
+
+        int port = 6000;
+        Thread serverThread = new Thread(() -> startServer(port));
+        serverThread.start();
+
+        while (true) {
+            sendDataToOtherServer("localhost", 5000); // Server2
+            sendDataToOtherServer("localhost", 7000); // Server3
+            try {
+                Thread.sleep(6000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void startServer(int port) {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Server2 started on port: " + port);
+            System.out.println("Server2 is listening on port " + port);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Server2 accepted connection from: " + clientSocket.getInetAddress().getHostAddress());
-                new Thread(() -> handleClient(clientSocket)).start();
+                Socket socket = serverSocket.accept();
+                System.out.println("Connection established with another server!");
+
+                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                String receivedMessage = input.readLine();
+                System.out.println("Received message: " + receivedMessage);
+
+                parseAndAddData(receivedMessage);
             }
         } catch (IOException e) {
-            System.err.println("Error in Server2: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private static void handleClient(Socket clientSocket) {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+    private static void parseAndAddData(String message) {
+        String[] entries = message.split(";");
+        for (String entry : entries) {
+            String[] keyValue = entry.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0];
+                String value = keyValue[1];
 
-            String command = in.readLine();
-            System.out.println("Server2 received command: " + command);
+                replicationCount.putIfAbsent(key, 0);
+                int currentReplication = replicationCount.get(key);
 
-            if ("STRT".equals(command)) {
-                out.println("YEP");
-                System.out.println("Server2 sent response: YEP");
-            } else {
-                out.println("NOP");
-                System.out.println("Server2 sent response: NOP");
+                if (currentReplication < float_tolerance) {
+                    replicationCount.put(key, currentReplication + 1);
+                    data.put(key, value);
+                    System.out.println("Added key: " + key + " with value: " + value);
+                }
             }
-        } catch (IOException e) {
-            System.err.println("Error in Server2 handling client: " + e.getMessage());
         }
+        System.out.println("Updated map: " + data);
     }
 
-    private static void connectToOtherServers(String[] servers) {
-        for (String server : servers) {
-            String[] parts = server.split(":");
-            String host = parts[0];
-            int port = Integer.parseInt(parts[1]);
-
-            try (Socket socket = new Socket(host, port)) {
-                System.out.println("Server2 connected to " + host + ":" + port);
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                out.println("Hello from Server2 to " + host + ":" + port);
-            } catch (IOException e) {
-                System.err.println("Server2 failed to connect to " + host + ":" + port + " - " + e.getMessage());
+    private static void sendDataToOtherServer(String host, int port) {
+        try (Socket socket = new Socket(host, port);
+             PrintWriter output = new PrintWriter(socket.getOutputStream(), true)) {
+            StringBuilder mapString = new StringBuilder();
+            for (String key : data.keySet()) {
+                mapString.append(key).append("=").append(data.get(key)).append(";");
             }
+            output.println(mapString.toString());
+            System.out.println("Sent data to server at " + host + ":" + port + " -> " + mapString);
+        } catch (IOException e) {
+            System.out.println("Failed to send data to " + host + ":" + port);
         }
     }
 }
