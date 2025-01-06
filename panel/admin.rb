@@ -1,35 +1,44 @@
 require 'socket'
+require 'google/protobuf'
+require_relative 'configuration_pb'
 
-class Configuration
-  attr_accessor :fault_tolerance_level
+class AdminClient
+  CONFIG_FILE = 'dist_subs.conf'
+  
 
-  def initialize(file_path)
-    File.open(file_path, "r") do |file|
+  def initialize(ports)
+    @ports = ports
+  end
+
+  def read_config
+    File.open(CONFIG_FILE, 'r') do |file|
       file.each_line do |line|
-        if line.start_with?("fault_tolerance_level")
-          @fault_tolerance_level = line.split("=").last.strip.to_i
+        if line.strip.start_with?('fault_tolerance_level')
+          return line.split('=').last.strip.to_i
         end
+      end
+    end
+  end
+
+  def send_configuration
+    fault_tolerance = read_config
+    config = Configuration::Configuration.new(fault_tolerance_level: fault_tolerance)
+
+
+    @ports.each do |port|
+      begin
+        socket = TCPSocket.new('localhost', port)
+        socket.write(config.to_proto)
+        socket.close
+        puts "Sent configuration to port #{port} with fault_tolerance_level=#{fault_tolerance}"
+      rescue => e
+        puts "Failed to connect to port #{port}: #{e.message}"
       end
     end
   end
 end
 
-def send_start_command(host, port)
-  begin
-    socket = TCPSocket.new(host, port)
-    socket.puts("STRT")
-    puts "Sent STRT command to #{host}:#{port}"
-    socket.close
-  rescue => e
-    puts "Failed to connect to #{host}:#{port} - #{e.message}"
-  end
-end
-
-# Read configuration
-config = Configuration.new("c:/Users/Yavuz/Desktop/java_serverlari/Dist_Subs_Service/panel/dist_subs.conf")
-puts "Fault Tolerance Level: #{config.fault_tolerance_level}"
-
-# Send STRT command to all servers
-send_start_command("localhost", 5000) # Server1
-send_start_command("localhost", 6000) # Server2
-send_start_command("localhost", 7000) # Server3
+# Example Usage
+ports = [7001, 7002, 7003]
+admin_client = AdminClient.new(ports)
+admin_client.send_configuration

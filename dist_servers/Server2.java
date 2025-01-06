@@ -1,26 +1,31 @@
-package org.example;
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
+import com.google.protobuf.*;
+import configuration.ConfigurationOuterClass.Configuration; // Generated Configuration class from Protobuf schema
 
 public class Server2 {
     private static HashMap<String, String> data = new HashMap<>();
     private static HashMap<String, Integer> replicationCount = new HashMap<>();
-    private static int float_tolerance = 1; //  tolerans değeri
+    private static int faultToleranceLevel = 1; // Default tolerance level
 
     public static void main(String[] args) {
         data.put("key3", "value3");
-        data.put("key4", "value3");
+        data.put("key4", "value4");
+
+        int adminPort = 7002;
+        Thread adminThread = new Thread(() -> startAdminListener(adminPort));
+        adminThread.start();
 
         int port = 6000;
         Thread serverThread = new Thread(() -> startServer(port));
         serverThread.start();
 
         while (true) {
-            sendDataToOtherServer("localhost", 5000); // Server2
+            sendDataToOtherServer("localhost", 5000); // Server1
             sendDataToOtherServer("localhost", 7000); // Server3
             try {
-                Thread.sleep(6000);
+                Thread.sleep(5000); // 5 seconds
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -35,12 +40,23 @@ public class Server2 {
                 Socket socket = serverSocket.accept();
                 System.out.println("Connection established with another server!");
 
-                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                String receivedMessage = input.readLine();
-                System.out.println("Received message: " + receivedMessage);
-
-                parseAndAddData(receivedMessage);
+                // Each connection is handled in a separate thread
+                new Thread(() -> handleClient(socket)).start();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void handleClient(Socket socket) {
+        try {
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String receivedMessage = input.readLine();
+            System.out.println("Received message: " + receivedMessage);
+
+            parseAndAddData(receivedMessage);
+
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -57,7 +73,7 @@ public class Server2 {
                 replicationCount.putIfAbsent(key, 0);
                 int currentReplication = replicationCount.get(key);
 
-                if (currentReplication < float_tolerance) {
+                if (currentReplication < faultToleranceLevel) {
                     replicationCount.put(key, currentReplication + 1);
                     data.put(key, value);
                     System.out.println("Added key: " + key + " with value: " + value);
@@ -78,6 +94,27 @@ public class Server2 {
             System.out.println("Sent data to server at " + host + ":" + port + " -> " + mapString);
         } catch (IOException e) {
             System.out.println("Failed to send data to " + host + ":" + port);
+        }
+    }
+
+    private static void startAdminListener(int port) {
+        try (ServerSocket adminSocket = new ServerSocket(port)) {
+            System.out.println("Admin listener running on port " + port);
+
+            while (true) {
+                Socket socket = adminSocket.accept();
+                System.out.println("Received connection from Admin Client.");
+
+                InputStream inputStream = socket.getInputStream();
+                Configuration config = Configuration.parseFrom(inputStream);
+
+                faultToleranceLevel = config.getFaultToleranceLevel();
+                System.out.println("Updated fault tolerance level to: " + faultToleranceLevel);
+
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
