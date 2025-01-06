@@ -3,4 +3,5 @@ package configuration;
 
 message Configuration {
     int32 fault_tolerance_level = 1;
+    string method = "STRT";  
 }

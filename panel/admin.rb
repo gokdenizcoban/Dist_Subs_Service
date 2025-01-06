@@ -22,7 +22,10 @@ class AdminClient
 
   def send_configuration
     fault_tolerance = read_config
-    config = Configuration::Configuration.new(fault_tolerance_level: fault_tolerance)
+    config = Configuration::Configuration.new(
+      fault_tolerance_level: 2,
+      method: "STRT"
+    )
 
 
     @ports.each do |port|
@@ -30,9 +33,9 @@ class AdminClient
         socket = TCPSocket.new('localhost', port)
         socket.write(config.to_proto)
         socket.close
-        puts "Sent configuration to port #{port} with fault_tolerance_level=#{fault_tolerance}"
+        puts "Port #{port}'a configuration gönderildi: fault_tolerance_level=#{fault_tolerance}, method=STRT"
       rescue => e
-        puts "Failed to connect to port #{port}: #{e.message}"
+        puts "Port #{port}'a bağlantı başarısız: #{e.message}"
       end
     end
   end

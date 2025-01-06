@@ -1,13 +1,13 @@
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
-import com.google.protobuf.*;
-import configuration.ConfigurationOuterClass.Configuration; // Generated Configuration class from Protobuf schema
+import configuration.ConfigurationOuterClass.Configuration;
 
 public class Server2 {
     private static HashMap<String, String> data = new HashMap<>();
     private static HashMap<String, Integer> replicationCount = new HashMap<>();
     private static int faultToleranceLevel = 1; // Default tolerance level
+    private static boolean isDataSharingEnabled = false; // Yeni eklendi
 
     public static void main(String[] args) {
         data.put("key3", "value3");
@@ -22,10 +22,12 @@ public class Server2 {
         serverThread.start();
 
         while (true) {
-            sendDataToOtherServer("localhost", 5000); // Server1
-            sendDataToOtherServer("localhost", 7000); // Server3
+            if (isDataSharingEnabled) {  // Kontrol eklendi
+                sendDataToOtherServer("localhost", 5000); // Server1
+                sendDataToOtherServer("localhost", 7000); // Server3
+            }
             try {
-                Thread.sleep(5000); // 5 seconds
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -107,6 +109,11 @@ public class Server2 {
 
                 InputStream inputStream = socket.getInputStream();
                 Configuration config = Configuration.parseFrom(inputStream);
+
+                if (config.getMethod().equals("STRT")) {
+                    isDataSharingEnabled = true;
+                    System.out.println("Data sharing enabled!");
+                }
 
                 faultToleranceLevel = config.getFaultToleranceLevel();
                 System.out.println("Updated fault tolerance level to: " + faultToleranceLevel);
