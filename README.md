@@ -85,7 +85,3 @@ Yeni özellikler eklemek için:
 - 22060399, Yavuz Selimhan Yılmaz
 - 22060353, Batuhan Yılmaz
 - 22060368, Deniz Çelik
-
-### Sunum Videosu Linki
-
-- Ekip üyeleri Google-Meet eşliğinde projeyi anlatmalı. Video girişi, üyelerin numara,isim ve teknik ilgi alanları şeklinde kendini tanıtması. Peşinden max. 3 dk kodları koşturma ve log.ların gösterimi. (Video linki, dersin hocası ve asistanı tarafından  erişilebilir olmalıdır.)
