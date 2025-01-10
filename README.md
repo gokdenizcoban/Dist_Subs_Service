@@ -21,7 +21,7 @@ Bu proje, dağıtık mimaride çalışan, hata toleranslı bir abone yönetim si
 
 1. Protocol Buffers dosyalarını derleyin:
 
-'protoc --java_out=src/main/java protobufs/.proto'
+protoc --java_out=src/main/java protobufs/.proto
 
 2. Projeyi derleyin:
 
