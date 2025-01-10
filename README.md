@@ -20,17 +20,17 @@ Bu proje, dağıtık mimaride çalışan, hata toleranslı bir abone yönetim si
 ## Kurulum
 
 1. Protocol Buffers dosyalarını derleyin:
- bash
-protoc --java_out=src/main/java protobufs/.proto
+
+'protoc --java_out=src/main/java protobufs/.proto'
 
 2. Projeyi derleyin:
-bash
+
 mvn clean package
 
 ## Çalıştırma
 
 1. Sunucuları başlatın:
-  bash
+
 Terminal 1
 java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar dist_servers.Server1
 Terminal 2
@@ -39,12 +39,12 @@ Terminal 3
 java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar dist_servers.Server3
 
 2. Admin panelini başlatın:
-   bash
+   
 cd panel
 ruby admin.rb
 
 3. Test istemcisini çalıştırın:
-   bash
+   
 java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar Clients.TestClient
 
 ## Sistem Mimarisi
