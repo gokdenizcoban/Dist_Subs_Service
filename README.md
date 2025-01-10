@@ -72,12 +72,7 @@ java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar 
 2. Test istemcisi ile aboneleri ekleyin
 3. Sunucular otomatik olarak senkronize olacaktır
 
-## Geliştirme
 
-Yeni özellikler eklemek için:
-1. Protocol Buffers tanımlarını güncelleyin
-2. İlgili Java sınıflarını oluşturun
-3. Sunucu ve istemci kodlarını güncel
 
 ### Ekip üyeleri
 
