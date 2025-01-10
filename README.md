@@ -32,7 +32,10 @@ mvn clean package
 1. Sunucuları başlatın:
 
 Terminal 1
+```bash
 java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar dist_servers.Server1
+```
+
 Terminal 2
 java -cp target/distributed-subscription-1.0-SNAPSHOT-jar-with-dependencies.jar dist_servers.Server2
 Terminal 3
